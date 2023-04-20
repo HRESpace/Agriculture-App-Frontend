@@ -4,9 +4,7 @@ import {View,Text,TextInput,
 import {firebase} from '../Config';
 import React, { useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
-// import { Location } from "expo";
 import * as Location from "expo-location";
-// import { ExifInterface } from 'expo-image-picker';
 import * as Camera from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
 import { useNavigation } from '@react-navigation/native';
@@ -19,26 +17,34 @@ export default function Form(props) {
   const [hasLocationPermission, setHasLocationPermission] = React.useState(null);
   const [image, setImage] = React.useState(null);
   const [imageUrl, setImageUrl] = React.useState(null);
+  const [location, setLocation] = React.useState();
   const [latitude, setLatitude] = React.useState();
   const [longitude, setLongitude] = React.useState();
   const [name, setName] = React.useState("");
   const [date, setDate] = React.useState("");
-  const [time, setTime] = React.useState("");
+  const [email, setEmail] = React.useState("");
   const [cropType, setCropType] = React.useState("");
   const [cropSeason, setCropSeason] = React.useState("");
-  const [cropStage, setCropStage] = React.useState("");
-  const [plotArea, setPlotArea] = React.useState(null);
-  const [village, setVillage] = React.useState("");
-  const [districtMandal, setDistrictMandal] = React.useState("");
+  const [villageDistrict, setVillageDistrict] = React.useState("");
   const [state, setState] = React.useState("");
   const [ownerName, setOwnerName] = React.useState("");
-  const [landType, setLandType] = React.useState("");
   const [soilType, setSoilType] = React.useState("");
-  const [soilMoisture, setSoilMoisture] = React.useState("");
   const [previousCrop, setPreviousCrop] = React.useState("");
-  const [yieldEstimate, setYieldEstimate] = React.useState(null);
   const [yieldHistory, setYieldHistory] = React.useState("");
   const { ExifInterface } = MediaLibrary;
+
+    React.useEffect(() => {
+        firebase.firestore().collection('users')
+        .doc(firebase.auth().currentUser.uid).get()
+        .then((snapshot) => {
+            if(snapshot.exists){
+                console.log(snapshot.data());
+                setEmail(snapshot.data());
+            } else {
+                console.log("User does not exist.")
+            }
+        })
+    }, [])
   
   useEffect(() => {
     (async () => {
@@ -61,17 +67,17 @@ export default function Form(props) {
     let { coords } = await Location.getCurrentPositionAsync({enableHighAccuracy: true});
     if (coords) {
       console.log("Coordinates fetched: ",coords)
-      var latitude = coords['latitude'];
-      setLatitude(latitude);
-      var longitude = coords['longitude'];
-      setLongitude(longitude);
-      //var location = 'Longitude: ' + longitude + '\nLatitude: ' + latitude;
-      //setLocation(location);
+      var lat = coords['latitude'];
+      setLatitude(lat);
+      var long = coords['longitude'];
+      setLongitude(long);
+      var location = 'Longitude: ' + longitude + '\nLatitude: ' + latitude;
+      setLocation(location);
     }
   };
 
   const pickImage = async () => {
-    getLocation();
+
     const { status } = await Camera.requestCameraPermissionsAsync();
     // const { status } = await Permissions.askAsync(Permissions.CAMERA);
     if (status === 'granted') {
@@ -111,14 +117,11 @@ export default function Form(props) {
     const storageRef = firebase.storage().ref();
     const imageRef = storageRef.child("images/" + image);
 
-    // // Upload the compressed image to the Firebase Storage
-    // await imageRef.put(compressedBlob.uri, { contentType: "image/jpeg" });
-
     // Upload the image to the Firebase Storage
     await imageRef.put(blob);
 
     // Add location to the image metadata
-    getLocation();
+    await getLocation();
     const metadata = {
       customMetadata: {
         'Longitude': longitude,
@@ -127,7 +130,7 @@ export default function Form(props) {
     };
 
     //await imageRef.updateMetadata(metadata);
-    await imageRef.updateMetadata(metadata)
+    await imageRef.updateMetadata(metadata);
     // Get the URL of the uploaded image
     const temp = await imageRef.getDownloadURL();
     
@@ -140,24 +143,20 @@ export default function Form(props) {
     const data = {
       user_name: name,
       imgUri: imageUrl,
+      date: date,
+      email_id : email.email,
       crop_type: cropType,
       crop_season: cropSeason,
-      crop_stage: cropStage,
-      plot_area: plotArea,
-      village: village,
-      district_or_mandal_name: districtMandal,
+      village_district: villageDistrict,
       state: state,
       field_owner: ownerName,
-      land_type: landType,
       soil_type: soilType,
-      soil_moisture: soilMoisture,
       prev_crop: previousCrop,
-      approx_yield: yieldEstimate,
       yield_history: yieldHistory
     };
     console.log(data);
     try {
-      await fetch("http://10.0.2.2:8000/userapi/", {
+      await fetch("https://sudhir0789.pythonanywhere.com/userapi/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -193,15 +192,6 @@ export default function Form(props) {
           maxLength={10}
           required={true}
         />
-        <Text style={styles.normalText}>Time(in 24 HR format)</Text>
-        <TextInput
-          onChangeText={(v) => setTime(v)}
-          value={time}
-          style={styles.textInput}
-          placeholder="HH:MM"
-          maxLength={5}
-          required={true}
-        />
         <Text style={styles.normalText}>Crop Type</Text>
         <TextInput
           onChangeText={(v) => setCropType(v)}
@@ -218,37 +208,12 @@ export default function Form(props) {
           maxLength={50}
           required={true}
         />
-        <Text style={styles.normalText}>Stage of Crop</Text>
+        <Text style={styles.normalText}>Village and District Name</Text>
         <TextInput
-          onChangeText={(v) => setCropStage(v)}
-          value={cropStage}
+          onChangeText={(v) => setVillageDistrict(v)}
+          value={villageDistrict}
           style={styles.textInput}
-          maxLength={250}
-          required={true}
-        />
-        <Text style={styles.normalText}>Area of the Plot (in acres)</Text>
-        <TextInput
-          onChangeText={(v) => setPlotArea(parseFloat(v))}
-          value={plotArea ? plotArea.toString() : ''}
-          //value={plotArea.toString()}
-          style={styles.textInput}
-          keyboardType="numeric"
-          required={true}
-        />
-        <Text style={styles.normalText}>Village Name</Text>
-        <TextInput
-          onChangeText={(v) => setVillage(v)}
-          value={village}
-          style={styles.textInput}
-          maxLength={50}
-          required={true}
-        />
-        <Text style={styles.normalText}>Name of District/Mandal</Text>
-        <TextInput
-          onChangeText={(v) => setDistrictMandal(v)}
-          value={districtMandal}
-          style={styles.textInput}
-          maxLength={50}
+          maxLength={100}
           required={true}
         />
         <Text style={styles.normalText}>Name of the State</Text>
@@ -259,18 +224,10 @@ export default function Form(props) {
           maxLength={50}
           required={true}
         />
-        <Text style={styles.normalText}>Name of Owner of Field</Text>
+        <Text style={styles.normalText}>Name of the Field owner</Text>
         <TextInput
           onChangeText={(v) => setOwnerName(v)}
           value={ownerName}
-          style={styles.textInput}
-          maxLength={50}
-          required={true}
-        />
-        <Text style={styles.normalText}>Irrigated/Dry Land</Text>
-        <TextInput
-          onChangeText={(v) => setLandType(v)}
-          value={landType}
           style={styles.textInput}
           maxLength={50}
           required={true}
@@ -283,29 +240,12 @@ export default function Form(props) {
           maxLength={50}
           required={true}
         />
-        <Text style={styles.normalText}>Soil Moisture</Text>
-        <TextInput
-          onChangeText={(v) => setSoilMoisture(v)}
-          value={soilMoisture}
-          style={styles.textInput}
-          maxLength={50}
-          required={true}
-        />
         <Text style={styles.normalText}>Previous Crop</Text>
         <TextInput
           onChangeText={(v) => setPreviousCrop(v)}
           value={previousCrop}
           style={styles.textInput}
           maxLength={50}
-          required={true}
-        />
-        <Text style={styles.normalText}>Approximate Yield Estimate(in kgs)</Text>
-        <TextInput
-          onChangeText={(v) => setYieldEstimate(parseFloat(v))}
-          value={yieldEstimate ? yieldEstimate.toString() : ''}
-          //value={yieldEstimate.toString()}
-          style={styles.textInput}
-          keyboardType="numeric"
           required={true}
         />
         <Text style={styles.normalText}>Previous yield history</Text>
@@ -316,7 +256,15 @@ export default function Form(props) {
           maxLength={250}
           required={true}
         />
-
+        {location && <Text>{location}</Text>}
+        <TouchableOpacity
+          style={styles.imagePicker}
+          onPress={() => {
+            getLocation();
+          }}
+        >
+        <Text style={{ color: "white" }}>Get the Location</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.imagePicker}
           onPress={() => {
@@ -326,8 +274,6 @@ export default function Form(props) {
         <Text style={{ color: "white" }}>Take an Image</Text>
         </TouchableOpacity>
         <Image style={{ height: 200 }} source={{ uri: image }} />
-        {/* {location && <Text>{location}</Text>} */}
-
         <TouchableOpacity onPress={postData} style={styles.button}>
         <Text style={{ color: "white" }}>POST DATA</Text>
         </TouchableOpacity>
@@ -347,6 +293,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   container: {
+    padding : 15,
     margin: 12,
   },
   textInput: {

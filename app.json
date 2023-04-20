@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Geo_Tagged",
-    "slug": "Geo_Tagged",
+    "name": "Agrotrack",
+    "slug": "agrotrack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +12,8 @@
       "backgroundColor": "#000000"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/60b6ab30-ec78-42bc-af54-9e2157013efb"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -30,10 +31,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "hr07",
     "extra": {
       "eas": {
-        "projectId": "6d8d6df1-e827-46ca-93da-9cf3a3563197"
+        "projectId": "60b6ab30-ec78-42bc-af54-9e2157013efb"
       }
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     }
   }
 }
